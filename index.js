@@ -39,8 +39,6 @@ module.exports = function chaiReduxMockStore(chai, utils) {
   function assertDispatchedActionsContains(expectedActions, actions) {
     var actionsIterator;
     var expectedIterator = 0;
-    var expected = [].concat(expectedActions);
-    var actual = [].concat(actions);
 
     for (
       actionsIterator = 0;
@@ -48,10 +46,8 @@ module.exports = function chaiReduxMockStore(chai, utils) {
       actionsIterator += 1
     ) {
       try {
-        expected = expectedActions[expectedIterator];
         assertActionMatch(actions[actionsIterator], expectedActions[expectedIterator]);
         expectedIterator += 1;
-        actual.shift();
       } catch (err) {
         // Let's try again with next dispatched action
       }
@@ -61,32 +57,22 @@ module.exports = function chaiReduxMockStore(chai, utils) {
       expectedIterator >= expectedActions.length,
       `Unable to find expected action at position ${expectedIterator} #{exp}`,
       'All actions have been found',
-      typeof expected === 'function' ? null : expected,
-      actual,
-      true // do not show diff for functions
+      expectedActions[expectedIterator]
     );
   }
 
   function assertExactDispatchedActions(expectedActions, actions) {
     var error;
     var errorPosition = -1;
-    var expected = [].concat(expectedActions);
-    var actual = actions;
     var i;
     var len = Math.min(actions.length, expectedActions.length);
 
     for (i = 0; i < len && !error; i += 1) {
       try {
-        actual = actions[i];
         assertActionMatch(actions[i], expectedActions[i]);
-        expected.shift();
       } catch (err) {
         error = `at position ${i}:\n\t${err.toString()}`;
         errorPosition = i;
-        // copy expected and actual if any.
-        // default fallback to remaining actions
-        expected = err.expected ? err.expected : expectedAction[i];
-        actual = err.actual ? err.actual : actual;
       }
     }
 
@@ -94,8 +80,8 @@ module.exports = function chaiReduxMockStore(chai, utils) {
       !error,
       `unexpected error for action ${error}`,
       'should have an error but got all expected actions',
-      expected,
-      actual,
+      errorPosition > -1 ? expectedActions[errorPosition] : expectedActions,
+      errorPosition > -1 ? actions[errorPosition] : actions,
       errorPosition > -1 && typeof expectedActions[errorPosition] !== 'string'
     );
 
