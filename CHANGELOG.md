@@ -9,7 +9,7 @@ All notable changes to this project will be documented in this file.
 ### Fixed
   - Should display action diff when using matching functions.
 
-### Added
+### Added
   - Add a release script
 
 ## [1.0.0]
