@@ -95,48 +95,6 @@ describe('redux-mock-store', () => {
         );
       }).to.throw();
     });
-
-    it('should display diff', () => {
-      try {
-        const store = createMockStore();
-
-        store.dispatch({
-          type: 'MyAction',
-          payload: {
-            foo: 'foo',
-            bar: 'bar',
-          }
-        });
-
-        expect(store).to.have.dispatchedActions(
-          (action) => expect(action).to.deep.equal({
-            type: 'MyAction',
-            payload: {
-              foo: 'bar',
-              bar: 'bar',
-            }
-          })
-        );
-
-        throw new Error('should have thrown.');
-      } catch (err) {
-        expect(err.actual).to.deep.equal({
-          type: 'MyAction',
-          payload: {
-            foo: 'foo',
-            bar: 'bar',
-          }
-        });
-        expect(err.expected).to.deep.equal({
-          type: 'MyAction',
-          payload: {
-            foo: 'bar',
-            bar: 'bar',
-          }
-        });
-        expect(err.showDiff).to.be.true;
-      }
-    });
   });
 
   describe('with several actions', () => {
@@ -217,34 +175,6 @@ describe('redux-mock-store', () => {
         ]);
       }).to.throw();
     });
-
-    it('should display diff', () => {
-      try {
-        const store = createMockStore();
-
-        store.dispatch({ type: 'MyAction', payload: { foo: 'foo', bar: 'bar' } });
-        store.dispatch({ type: 'MyOtherAction', payload: { foo: 'foo' } });
-
-        expect(store).to.have.dispatchedActions([
-          (action) => expect(action).to.deep.equal({
-            type: 'MyAction', payload: { foo: 'foo', bar: 'bar' }
-          }),
-          (action) => expect(action).to.deep.equal({
-            type: 'MyOtherAction', payload: { foo: 'bar', bar: 'bar' }
-          })
-        ]);
-
-        throw new Error('should have thrown.');
-      } catch (err) {
-        expect(err.actual).to.deep.equal({
-          type: 'MyOtherAction', payload: { foo: 'foo' }
-        });
-        expect(err.expected).to.deep.equal({
-          type: 'MyOtherAction', payload: { foo: 'bar', bar: 'bar' }
-        });
-        expect(err.showDiff).to.be.true;
-      }
-    });
   });
 
   describe('contains', () => {
@@ -296,58 +226,6 @@ describe('redux-mock-store', () => {
           { type: 'MyOtherAction' },
         ]);
       }).to.throw();
-    });
-
-    it('should display diff', () => {
-      try {
-        const store = createMockStore();
-
-        store.dispatch({ type: 'MyAction', payload: { foo: 'foo', bar: 'bar' } });
-        store.dispatch({ type: 'MyOtherAction', payload: { foo: 'foo' } });
-
-        expect(store).to.contain.dispatchedActions([
-          (action) => expect(action).to.deep.equal({
-            type: 'MyAction', payload: { foo: 'foo', bar: 'bar' }
-          }),
-          { type: 'MyOtherAction', payload: { foo: 'bar', bar: 'bar' } },
-        ]);
-
-        throw new Error('should have thrown.');
-      } catch (err) {
-        expect(err.actual).to.deep.equal([
-          { type: 'MyOtherAction', payload: { foo: 'foo' } },
-        ]);
-        expect(err.expected).to.deep.equal({
-          type: 'MyOtherAction', payload: { foo: 'bar', bar: 'bar' }
-        });
-        expect(err.showDiff).to.be.true;
-      }
-    });
-
-    it('should not display diff for function', () => {
-      try {
-        const store = createMockStore();
-
-        store.dispatch({ type: 'MyAction', payload: { foo: 'foo', bar: 'bar' } });
-        store.dispatch({ type: 'MyOtherAction', payload: { foo: 'foo' } });
-
-        expect(store).to.contain.dispatchedActions([
-          (action) => expect(action).to.deep.equal({
-            type: 'MyAction', payload: { foo: 'foo', bar: 'bar' }
-          }),
-          (action) => expect(action).to.deep.equal({
-            type: 'MyOtherAction', payload: { foo: 'bar', bar: 'bar' },
-          }),
-        ]);
-
-        throw new Error('should have thrown.');
-      } catch (err) {
-        expect(err.actual).to.deep.equal([
-          { type: 'MyOtherAction', payload: { foo: 'foo' } },
-        ]);
-        expect(err.expected).to.be.null;
-        expect(err.showDiff).to.be.true;
-      }
     });
   });
 
