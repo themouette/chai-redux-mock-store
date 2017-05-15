@@ -1,6 +1,9 @@
 Redux Mock Store chai helpers
 =============================
 
+[![Build
+Status](https://travis-ci.org/themouette/chai-redux-mock-store.svg?branch=master)](https://travis-ci.org/themouette/chai-redux-mock-store)
+
 A set of helpers to use with [chaijs](http://chaijs.com) and
 [redux-mock-store](http://arnaudbenard.com/redux-mock-store/).
 
