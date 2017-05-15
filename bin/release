@@ -1,0 +1,258 @@
+#!/usr/bin/env bash
+
+# Release a library. This means bump version and publish it on npm.
+
+set -o errexit
+set -o pipefail
+set -o nounset
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
+
+SCRIPT=release
+INFO="
+Release library.
+
+You must be in the library directory to release library
+"
+
+function usage
+{
+   echo
+   echo "$INFO"
+   echo
+   echo -e " \033[4mUsage:\033[0m $SCRIPT [patch|minor|major|version]"
+   echo
+   echo "          Options :"
+   echo "              -h				display this help"
+   echo "              -y				do not ask questions"
+   echo
+   echo -e " \033[4mExemples:\033[0m "
+   echo -e "       $SCRIPT patch"
+   echo
+
+   exit 255
+}
+
+
+# Lecture des parametres
+o_yes=""
+while getopts "yh" options; do
+   case $options in
+      y) o_yes="1"
+         ;;
+    h|?) usage
+         ;;
+      *) usage
+         ;;
+  esac
+done
+# remove read arguments
+shift $(( OPTIND - 1 ))
+
+################################################################################
+# warn and ask the user aknowledgement if index is dirty
+# Globals:
+#   None
+# Arguments:
+#   None
+# Returns
+#   None
+################################################################################
+function warn_if_dirty_index {
+  declare dirty_index="$(git status --porcelain .)"
+  if [[ -z "$dirty_index" ]]; then
+    return 0
+  fi
+
+  echo "You have unstaged changes. Local changes will not be published."
+  if [[ -n "$o_yes" ]]; then
+    return 0
+  fi
+
+  read -p 'Do you want to continue (y/N/v(iew-diff)/f(ull-diff))? ' -n 1 -r
+  case $REPLY in
+    V|v)
+      git status .
+      warn_if_dirty_index
+      ;;
+    F|f)
+      git status
+      warn_if_dirty_index
+      ;;
+    N|n|Q|q)
+      echo "Exiting"
+      exit 1;
+      ;;
+    Y|y)
+      ;;
+    *)
+      warn_if_dirty_index
+  esac
+}
+
+
+################################################################################
+# return the version of a package fron package.json
+#
+# Usage:
+#     declare package_version="$(get_package_version "${pkg}")"
+#
+# Globals:
+#   None
+# Arguments:
+#   None
+# Returns
+#   None
+################################################################################
+function get_package_version {
+  package=${1:-}
+  if [[ -f "$package/package.json" ]]
+  then
+    echo "$(node -e "console.log(require('${1}/package.json').version)")"
+  else
+    echo "unknown"
+  fi
+}
+
+################################################################################
+# Update package version
+#
+# Also:
+#   * update $VERSION value to make sure it matches current release
+#   * Add `package.json` to git staging area
+#
+# Globals:
+#   * VERSION
+# Arguments:
+#   None
+# Returns
+#   None
+################################################################################
+function bump_version {
+  declare version="${1:-}"
+  npm version "${version}" --no-git-tag-version
+  git add package.json
+}
+
+################################################################################
+# Update project CHANGELOG.md
+#
+# Also:
+#   * Add `CHANGELOG.md` to git staging area
+#
+# Globals:
+#   DIR
+# Arguments:
+#   None
+# Returns
+#   None
+################################################################################
+function update_project_changelog {
+  declare version="$(get_package_version "$DIR")"
+  declare date=$(date +%Y-%m-%d)
+  sed -i \
+    -e "s:^## \[\?Unreleased\]\?:## [Unreleased]\n\n## [${version}] - ${date}:" \
+    -e "s#^\[Unreleased\]: \(.*\)/compare/\(.*\)\.\.\.\(master\|HEAD\)#[Unreleased]: \1/compare/${version}\.\.\.\3\n[${version}]: \1/compare/\2...${version}#" \
+    CHANGELOG.md
+  git add CHANGELOG.md
+}
+
+################################################################################
+# Check git diff for validation
+#
+# Also:
+#   * reset modifications on user request
+#
+# Globals:
+#   None
+# Arguments:
+#   None
+# Returns
+#   None
+################################################################################
+function validate_changes {
+  git diff --cached
+  read -p 'Are those changes OK (y/N)? ' -n 1 -r
+  if [[ ! $REPLY =~ ^[Yy]$ ]]
+  then
+    git reset HEAD CHANGELOG.md package.json
+    git checkout CHANGELOG.md package.json
+    exit 1;
+  fi
+}
+
+################################################################################
+# rebase safely against master
+# Globals:
+#   branch
+# Arguments:
+#   None
+# Returns
+#   None
+################################################################################
+function rebase {
+  declare branch="${1:-master}"
+  # save current state and move to temp branch
+  declare DIRTY=$(git status --porcelain | grep -v '^??' | wc -l)
+  [[ "0" = "${DIRTY}" ]] || git stash
+  function clean {
+    [[ "0" = "${DIRTY}" ]] || git stash pop
+  }
+  trap clean EXIT
+
+  git pull --rebase origin "$branch"
+
+  clean
+  trap - EXIT
+}
+
+################################################################################
+# Commit and submit release
+#
+# Globals:
+#   None
+# Arguments:
+#   None
+# Returns
+#   None
+################################################################################
+function submit_release {
+  declare version="$(get_package_version .)"
+  declare tagname="${version}"
+
+  git commit -m "Release ${version}"
+
+  rebase master
+
+  npm test
+
+  git tag "${tagname}"
+  git push origin master "${tagname}"
+  npm publish
+}
+
+################################################################################
+# Program main function
+# Globals:
+#   None
+# Arguments:
+#   None
+# Returns
+#   None
+################################################################################
+function main {
+  declare version="${1:-}"
+  [[ -n "$version" ]] || {
+    echo "You must pass expected version as first parameter";
+    exit 1;
+  }
+
+  warn_if_dirty_index
+  bump_version "$version"
+  update_project_changelog
+  [[ -n "$o_yes" ]] || validate_changes
+  submit_release
+}
+
+main "$@"
+
