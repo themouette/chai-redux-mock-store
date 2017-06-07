@@ -85,7 +85,7 @@ module.exports = function chaiReduxMockStore(chai, utils) {
         errorPosition = i;
         // copy expected and actual if any.
         // default fallback to remaining actions
-        expected = err.expected ? err.expected : expectedAction[i];
+        expected = err.expected ? err.expected : expectedActions[i];
         actual = err.actual ? err.actual : actual;
       }
     }
